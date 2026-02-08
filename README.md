@@ -170,14 +170,10 @@ Androidの設定から、Termuxを「バッテリー最適化の対象外」に�
 
 ## ワンライナーでサクッとセットアップ（上級者向け）
 
-> ⚠️ **この機能は現在準備中です**  
-> 公開URLが確定次第、利用可能になります。
-
 上記の手順を自動化したスクリプトを用意しています。
 
 ```bash
-# 例（URLは実際の公開先に置き換えてください）
-curl -sL https://example.com/termux-openclaw-install.sh | bash
+curl -sL https://raw.githubusercontent.com/sw11ow240/openclaw-android-guide/main/termux-openclaw-install.sh | bash
 ```
 
 > 🔒 **セキュリティ上の注意**  
