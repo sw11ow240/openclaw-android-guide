@@ -91,9 +91,7 @@ pkg install nodejs-lts git
 
 <img src="screenshots/04-nodejs-git-confirm.png" width="300" alt="Node.jsとGitのインストール確認">
 
-インストールが完了すると、SSHキーも自動生成されます。
-
-<img src="screenshots/05-nodejs-git-done.png" width="300" alt="Node.jsとGitインストール完了">
+「Do you want to continue?」と聞かれたら `y` を入力してEnter。
 
 ---
 
