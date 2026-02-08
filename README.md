@@ -56,11 +56,15 @@
 
 3. インストール時に「提供元不明のアプリ」の許可を求められたら許可する
 
+<img src="screenshots/01-fdroid-termux.png" width="300" alt="F-DroidでTermuxをダウンロード">
+
 ---
 
 ## Step 2: Termuxの初期設定
 
 Termuxを開いて、以下のコマンドを**1行ずつ**実行します。
+
+<img src="screenshots/02-termux-welcome.png" width="300" alt="Termux初回起動画面">
 
 ```bash
 # ストレージへのアクセス許可（ファイル操作が必要な場合）
@@ -72,6 +76,8 @@ pkg update && pkg upgrade
 
 「Do you want to continue?」と聞かれたら `y` を入力してEnter。
 
+<img src="screenshots/03-pkg-update-done.png" width="300" alt="pkg update完了">
+
 ---
 
 ## Step 3: 環境を構築する
@@ -82,6 +88,12 @@ pkg update && pkg upgrade
 # Node.js と Git をインストール
 pkg install nodejs-lts git
 ```
+
+<img src="screenshots/04-nodejs-git-confirm.png" width="300" alt="Node.jsとGitのインストール確認">
+
+インストールが完了すると、SSHキーも自動生成されます。
+
+<img src="screenshots/05-nodejs-git-done.png" width="300" alt="Node.jsとGitインストール完了">
 
 ---
 
@@ -97,6 +109,8 @@ mkdir -p ~/openclaw && cd ~/openclaw
 # 初期設定を開始
 clawdbot init
 ```
+
+<img src="screenshots/06-clawdbot-installed.png" width="300" alt="clawdbotインストール完了">
 
 `clawdbot init` を実行すると、APIキーの入力を求められます。  
 利用するLLMプロバイダのAPIキーを入力してください。
