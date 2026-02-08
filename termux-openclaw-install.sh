@@ -1,62 +1,87 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# OpenClaw Termux One-Line Installer
-# Usage: curl -sL https://example.com/termux-openclaw-install.sh | bash
-#
-# 注意: 実行前に必ずスクリプトの中身を確認してください
+# OpenClaw (Clawdbot) Termux Installation Script
+# https://github.com/sw11ow240/openclaw-android-guide
 
-set -euo pipefail
+set -e
 
-echo "OpenClaw Termux Installer"
-echo "========================="
+echo "🚀 OpenClaw Termux Setup Script"
+echo "================================"
 echo ""
 
-# Termux環境チェック
-if ! command -v pkg >/dev/null 2>&1; then
-    echo "[エラー] このスクリプトはTermux環境で実行してください。"
-    echo "Termuxは F-Droid からインストールできます："
-    echo "  https://f-droid.org/packages/com.termux/"
+# Check if running in Termux
+if [ ! -d "/data/data/com.termux" ]; then
+    echo "❌ Error: This script must be run in Termux"
     exit 1
 fi
 
-# 追加チェック: Termuxのprefixを確認
-if [[ ! -d "/data/data/com.termux/files/usr" ]]; then
-    echo "[警告] Termux環境ではない可能性があります。続行しますか？ (y/N)"
-    read -r confirm
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "中断しました。"
-        exit 1
-    fi
-fi
+# Step 1: Update packages
+echo "📦 Step 1: Updating packages..."
+pkg update -y
+pkg upgrade -y
 
-# Update packages
-echo "[1/4] パッケージを更新しています..."
-pkg update -y && pkg upgrade -y
-
-# Install dependencies
-echo "[2/4] Node.js と Git をインストールしています..."
+# Step 2: Install Node.js and Git
+echo "📦 Step 2: Installing Node.js and Git..."
 pkg install -y nodejs-lts git
 
-# Install OpenClaw
-echo "[3/4] Clawdbot（OpenClaw）をインストールしています..."
+# Step 3: Install Clawdbot
+echo "📦 Step 3: Installing Clawdbot..."
 npm install -g clawdbot
 
-# Create workspace directory
-echo "[4/4] 作業ディレクトリを作成しています..."
+# Step 4: Apply Android patch for clipboard module
+echo "🔧 Step 4: Applying Android compatibility patch..."
+CLIPBOARD_PATH="/data/data/com.termux/files/usr/lib/node_modules/clawdbot/node_modules/@mariozechner/clipboard/index.js"
+
+if [ -f "$CLIPBOARD_PATH" ]; then
+    cat > "$CLIPBOARD_PATH" << 'PATCH'
+/* Dummy clipboard module for Android/Termux */
+const noop = () => {}
+const noopBool = () => false
+const noopArr = () => []
+const noopStr = () => ''
+module.exports.availableFormats = noopArr
+module.exports.getText = noopStr
+module.exports.setText = noop
+module.exports.hasText = noopBool
+module.exports.getImageBinary = () => null
+module.exports.getImageBase64 = noopStr
+module.exports.setImageBinary = noop
+module.exports.setImageBase64 = noop
+module.exports.hasImage = noopBool
+module.exports.getHtml = noopStr
+module.exports.setHtml = noop
+module.exports.hasHtml = noopBool
+module.exports.getRtf = noopStr
+module.exports.setRtf = noop
+module.exports.hasRtf = noopBool
+module.exports.clear = noop
+module.exports.watch = noop
+module.exports.callThreadsafeFunction = noop
+PATCH
+    echo "✅ Clipboard patch applied"
+else
+    echo "⚠️ Warning: Clipboard module not found, skipping patch"
+fi
+
+# Step 5: Create workspace
+echo "📁 Step 5: Creating workspace..."
 mkdir -p ~/openclaw
+cd ~/openclaw
+
+# Step 6: Run setup
+echo "⚙️ Step 6: Running clawdbot setup..."
+clawdbot setup || true
 
 echo ""
-echo "========================================"
-echo "インストール完了"
-echo "========================================"
+echo "================================"
+echo "✅ Installation complete!"
 echo ""
-echo "次のステップ:"
-echo "  1. cd ~/openclaw"
-echo "  2. clawdbot init    # APIキーを設定"
-echo "  3. clawdbot gateway start"
+echo "Next steps:"
+echo "1. Edit ~/.clawdbot/clawdbot.json to add your API key"
+echo "2. Run: cd ~/openclaw && clawdbot gateway"
 echo ""
-echo "便利な追加設定:"
-echo "  - Termux:API をインストール → カメラ・マイクが使えます"
-echo "  - Termux:Boot をインストール → 自動起動が可能になります"
-echo "  - バッテリー最適化から除外 → バックグラウンドで安定動作します"
+echo "Optional: Install Termux:API for camera/mic access"
+echo "  - Download from F-Droid: https://f-droid.org/packages/com.termux.api/"
+echo "  - Then run: pkg install termux-api"
 echo ""
-echo "詳細は公式ドキュメントをご覧ください: https://docs.clawd.bot"
+echo "📖 Full guide: https://github.com/sw11ow240/openclaw-android-guide"
+echo "================================"

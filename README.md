@@ -67,7 +67,7 @@ Termuxを開いて、以下のコマンドを**1行ずつ**実行します。
 <img src="screenshots/02-termux-welcome.png" width="300" alt="Termux初回起動画面">
 
 ```bash
-# ストレージへのアクセス許可（ファイル操作が必要な場合）
+# ストレージへのアクセス許可（カメラ画像の保存などに必要）
 termux-setup-storage
 
 # パッケージを最新に更新
@@ -100,28 +100,141 @@ pkg install nodejs-lts git
 ```bash
 # Clawdbot（OpenClaw）をインストール
 npm install -g clawdbot
-
-# 作業フォルダを作成して移動
-mkdir -p ~/openclaw && cd ~/openclaw
-
-# 初期設定を開始
-clawdbot init
 ```
 
 <img src="screenshots/06-clawdbot-installed.png" width="300" alt="clawdbotインストール完了">
 
-`clawdbot init` を実行すると、APIキーの入力を求められます。  
-利用するLLMプロバイダのAPIキーを入力してください。
+### ⚠️ Android向けパッチ（重要）
+
+現時点では、clawdbotの一部モジュール（clipboard）がAndroid ARM64に対応していないため、ダミーモジュールで置き換える必要があります。
+
+```bash
+# ダミーモジュールを作成
+cat > /tmp/clipboard-dummy.js << 'EOF'
+const noop = () => {}
+const noopBool = () => false
+const noopArr = () => []
+const noopStr = () => ''
+module.exports.availableFormats = noopArr
+module.exports.getText = noopStr
+module.exports.setText = noop
+module.exports.hasText = noopBool
+module.exports.getImageBinary = () => null
+module.exports.getImageBase64 = noopStr
+module.exports.setImageBinary = noop
+module.exports.setImageBase64 = noop
+module.exports.hasImage = noopBool
+module.exports.getHtml = noopStr
+module.exports.setHtml = noop
+module.exports.hasHtml = noopBool
+module.exports.getRtf = noopStr
+module.exports.setRtf = noop
+module.exports.hasRtf = noopBool
+module.exports.clear = noop
+module.exports.watch = noop
+module.exports.callThreadsafeFunction = noop
+EOF
+
+# clipboardモジュールを置き換え
+cp /tmp/clipboard-dummy.js /data/data/com.termux/files/usr/lib/node_modules/clawdbot/node_modules/@mariozechner/clipboard/index.js
+```
+
+> 💡 このパッチは将来のバージョンで不要になる可能性があります。
 
 ---
 
-## Step 5: 起動する
+## Step 5: 初期設定
 
 ```bash
-clawdbot gateway start
+# 作業フォルダを作成して移動
+mkdir -p ~/openclaw && cd ~/openclaw
+
+# 初期設定を開始
+clawdbot setup
 ```
 
+設定ファイルが `~/.clawdbot/clawdbot.json` に作成されます。
+
+### APIキーの設定
+
+設定ファイルを編集してAPIキーを追加します：
+
+```bash
+nano ~/.clawdbot/clawdbot.json
+```
+
+以下のように `apiKey` を追加：
+
+```json
+{
+  "agent": {
+    "model": "anthropic/claude-sonnet-4-20250514",
+    "apiKey": "sk-ant-xxxxx（あなたのAPIキー）"
+  }
+}
+```
+
+---
+
+## Step 6: 起動する
+
+```bash
+cd ~/openclaw
+clawdbot gateway
+```
+
+> ⚠️ **注意**: Androidでは `clawdbot gateway start`（デーモン化）はサポートされていません。フォアグラウンドで `clawdbot gateway` を実行してください。
+
 これでOpenClawが起動します！🎉
+
+### バックグラウンドで実行したい場合
+
+```bash
+# nohupを使ってバックグラウンド実行
+nohup clawdbot gateway > ~/openclaw/gateway.log 2>&1 &
+```
+
+---
+
+## 【オプション】カメラ・マイクを使う
+
+AIエージェントからカメラやマイクにアクセスしたい場合は、**Termux:API** をインストールします。
+
+### 1. Termux:APIアプリをインストール
+
+F-Droidから **Termux:API** をダウンロードしてインストール：
+👉 https://f-droid.org/packages/com.termux.api/
+
+### 2. termux-apiパッケージをインストール
+
+Termuxで以下を実行：
+
+```bash
+pkg install termux-api
+```
+
+### 3. 権限を許可
+
+Androidの設定から、Termux:APIアプリに以下の権限を許可：
+- カメラ
+- マイク
+- 位置情報（必要に応じて）
+
+<img src="screenshots/07-permissions-granted.png" width="300" alt="権限設定画面">
+
+### 4. 動作確認
+
+```bash
+# カメラで撮影
+termux-camera-photo test.jpg
+ls -la test.jpg
+
+# マイクで録音（3秒）
+termux-microphone-record -l 3 -f test.m4a
+ls -la test.m4a
+```
+
+<img src="screenshots/08-camera-success.png" width="300" alt="カメラ撮影成功">
 
 ---
 
@@ -161,13 +274,23 @@ AIエージェントを運用する際は、**ホームネットワークから�
 
 ## 便利なオプション設定
 
-### Termux:API（カメラ・マイクを使う）
-
-F-Droidから **Termux:API** もインストールすると、OpenClawからカメラやマイクが使えるようになります。
-
 ### Termux:Boot（自動起動）
 
 スマホの再起動時に自動でOpenClawを起動したい場合は **Termux:Boot** をインストール。
+
+👉 https://f-droid.org/packages/com.termux.boot/
+
+インストール後、`~/.termux/boot/` に起動スクリプトを配置：
+
+```bash
+mkdir -p ~/.termux/boot
+cat > ~/.termux/boot/start-openclaw.sh << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+cd ~/openclaw
+clawdbot gateway >> ~/openclaw/gateway.log 2>&1
+EOF
+chmod +x ~/.termux/boot/start-openclaw.sh
+```
 
 ### バッテリー最適化を除外
 
@@ -177,6 +300,24 @@ Androidの設定から、Termuxを「バッテリー最適化の対象外」に�
 
 > 💡 **端末メーカーによる注意点**  
 > Xiaomi、OPPO、Huaweiなど一部メーカーの端末では、上記に加えて「アプリのロック」「自動起動の許可」「省電力モードからの除外」など、メーカー独自の設定が必要な場合があります。「[メーカー名] アプリ バックグラウンド」で検索してみてください。
+
+---
+
+## トラブルシューティング
+
+### 「Cannot find module '@mariozechner/clipboard-android-arm64'」エラー
+
+Step 4のAndroid向けパッチを適用してください。
+
+### 「Gateway service install not supported on android」エラー
+
+`clawdbot gateway start` ではなく `clawdbot gateway` を使用してください。Androidではデーモン化がサポートされていません。
+
+### カメラ/マイクにアクセスできない
+
+1. Termux:APIアプリがインストールされているか確認
+2. termux-apiパッケージがインストールされているか確認（`pkg install termux-api`）
+3. Androidの設定でTermux:APIアプリに権限が付与されているか確認
 
 ---
 
@@ -211,6 +352,8 @@ curl -sL https://raw.githubusercontent.com/sw11ow240/openclaw-android-guide/main
 
 - [OpenClaw 公式ドキュメント](https://docs.clawd.bot)
 - [Termux (F-Droid)](https://f-droid.org/packages/com.termux/)
+- [Termux:API (F-Droid)](https://f-droid.org/packages/com.termux.api/)
+- [Termux:Boot (F-Droid)](https://f-droid.org/packages/com.termux.boot/)
 - [Anthropic API](https://console.anthropic.com/)
 - [OpenAI API](https://platform.openai.com/)
 
