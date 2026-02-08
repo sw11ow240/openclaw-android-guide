@@ -108,13 +108,7 @@ npm install -g clawdbot
 
 Clawdbotは公式にはAndroidをサポートしていませんが、[DroidClaw](https://github.com/nexty5870/DroidClaw) プロジェクトのパッチを適用することで動作します。
 
-**ワンコマンドでパッチを適用：**
-
-```bash
-curl -sL https://raw.githubusercontent.com/nexty5870/DroidClaw/main/setup-local.sh | bash -s YOUR_API_KEY
-```
-
-または、**手動でパッチを適用：**
+**パッチを適用：**
 
 ```bash
 # 1. ディレクトリ作成
