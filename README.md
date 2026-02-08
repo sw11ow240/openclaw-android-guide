@@ -106,40 +106,46 @@ npm install -g clawdbot
 
 ### ⚠️ Android向けパッチ（重要）
 
-現時点では、clawdbotの一部モジュール（clipboard）がAndroid ARM64に対応していないため、ダミーモジュールで置き換える必要があります。
+Clawdbotは公式にはAndroidをサポートしていませんが、[DroidClaw](https://github.com/nexty5870/DroidClaw) プロジェクトのパッチを適用することで動作します。
+
+**ワンコマンドでパッチを適用：**
 
 ```bash
-# ダミーモジュールを作成
-cat > /tmp/clipboard-dummy.js << 'EOF'
-const noop = () => {}
-const noopBool = () => false
-const noopArr = () => []
-const noopStr = () => ''
-module.exports.availableFormats = noopArr
-module.exports.getText = noopStr
-module.exports.setText = noop
-module.exports.hasText = noopBool
-module.exports.getImageBinary = () => null
-module.exports.getImageBase64 = noopStr
-module.exports.setImageBinary = noop
-module.exports.setImageBase64 = noop
-module.exports.hasImage = noopBool
-module.exports.getHtml = noopStr
-module.exports.setHtml = noop
-module.exports.hasHtml = noopBool
-module.exports.getRtf = noopStr
-module.exports.setRtf = noop
-module.exports.hasRtf = noopBool
-module.exports.clear = noop
-module.exports.watch = noop
-module.exports.callThreadsafeFunction = noop
-EOF
-
-# clipboardモジュールを置き換え
-cp /tmp/clipboard-dummy.js /data/data/com.termux/files/usr/lib/node_modules/clawdbot/node_modules/@mariozechner/clipboard/index.js
+curl -sL https://raw.githubusercontent.com/nexty5870/DroidClaw/main/setup-local.sh | bash -s YOUR_API_KEY
 ```
 
-> 💡 このパッチは将来のバージョンで不要になる可能性があります。
+または、**手動でパッチを適用：**
+
+```bash
+# 1. ディレクトリ作成
+mkdir -p ~/.clawdbot/tmp
+
+# 2. TMPDIR設定
+echo 'export TMPDIR="$HOME/.clawdbot/tmp"' >> ~/.bashrc
+export TMPDIR="$HOME/.clawdbot/tmp"
+
+# 3. clipboardスタブ作成
+STUB="$PREFIX/lib/node_modules/@mariozechner/clipboard-android-arm64"
+mkdir -p "$STUB"
+echo '{"name":"@mariozechner/clipboard-android-arm64","version":"0.3.2","main":"index.js"}' > "$STUB/package.json"
+echo 'module.exports={getText:async()=>"",setText:async()=>{},hasImage:async()=>false,clear:async()=>{},availableFormats:async()=>[]};' > "$STUB/index.js"
+
+# 4. /tmp パスを置換
+find $PREFIX/lib/node_modules/clawdbot/dist -name "*.js" \
+  -exec grep -l "/tmp/clawdbot" {} \; | while read f; do
+    sed -i "s|/tmp/clawdbot|$HOME/.clawdbot/tmp|g" "$f"
+done
+
+# 5. clawラッパー作成
+cat > $PREFIX/bin/claw << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+export TMPDIR="$HOME/.clawdbot/tmp"
+exec clawdbot "$@"
+EOF
+chmod +x $PREFIX/bin/claw
+```
+
+> 💡 パッチ適用後は `clawdbot` の代わりに `claw` コマンドを使用してください。
 
 ---
 
@@ -180,10 +186,10 @@ nano ~/.clawdbot/clawdbot.json
 
 ```bash
 cd ~/openclaw
-clawdbot gateway
+claw gateway
 ```
 
-> ⚠️ **注意**: Androidでは `clawdbot gateway start`（デーモン化）はサポートされていません。フォアグラウンドで `clawdbot gateway` を実行してください。
+> ⚠️ **注意**: パッチ適用後は `clawdbot` ではなく `claw` コマンドを使用してください。`claw` は適切な環境変数を設定してから `clawdbot` を実行するラッパーです。
 
 これでOpenClawが起動します！🎉
 
@@ -191,7 +197,7 @@ clawdbot gateway
 
 ```bash
 # nohupを使ってバックグラウンド実行
-nohup clawdbot gateway > ~/openclaw/gateway.log 2>&1 &
+nohup claw gateway > ~/.clawdbot/logs/gateway.log 2>&1 &
 ```
 
 ---
@@ -351,6 +357,7 @@ curl -sL https://raw.githubusercontent.com/sw11ow240/openclaw-android-guide/main
 ## 関連リンク
 
 - [OpenClaw 公式ドキュメント](https://docs.clawd.bot)
+- [DroidClaw](https://github.com/nexty5870/DroidClaw) - Android向けパッチスクリプト
 - [Termux (F-Droid)](https://f-droid.org/packages/com.termux/)
 - [Termux:API (F-Droid)](https://f-droid.org/packages/com.termux.api/)
 - [Termux:Boot (F-Droid)](https://f-droid.org/packages/com.termux.boot/)
